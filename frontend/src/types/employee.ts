@@ -33,6 +33,8 @@ export type EmployeeRow = {
   gender: string | null;
   status: string | null;
   createdAt: string;
+  updatedAt: string;
+  avatarUrl: string | null;
 };
 
 export type EmployeeWithCompany = EmployeeApi & {

@@ -12,6 +12,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  FilterFn,
 } from "@tanstack/react-table";
 import type { EmployeeRow } from "@/types/employee";
 
@@ -38,8 +39,12 @@ interface EmployeesDataTableProps {
   data: EmployeeRow[];
   externalSearch?: string;
   externalDepartment?: string;
+  externalStatus?: string;
+  externalGender?: string;
+  visibleColumnIds?: string[];
   showInternalToolbar?: boolean;
 }
+
 
 /**
  * TanStack Table v8 based employee table.
@@ -49,6 +54,9 @@ export function EmployeesDataTable({
   data,
   externalSearch,
   externalDepartment,
+  externalStatus,
+  externalGender,
+  visibleColumnIds,
   showInternalToolbar,
 }: EmployeesDataTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -59,6 +67,27 @@ export function EmployeesDataTable({
   const [rowSelection, setRowSelection] = React.useState({});
 
   const [pageSize, setPageSize] = React.useState(10);
+  const [globalFilter, setGlobalFilter] = React.useState("");
+
+  const employeeGlobalFilterFn: FilterFn<EmployeeRow> = (
+    row,
+    _columnId,
+    filterValue,
+  ) => {
+    const search = String(filterValue ?? "")
+      .toLowerCase()
+      .trim();
+
+    if (!search) return true;
+
+    const { name, email, mobile, department, jobTitle } = row.original;
+
+    const valuesToSearch = [name, email, mobile, department, jobTitle]
+      .filter(Boolean)
+      .map((value) => String(value).toLowerCase());
+
+    return valuesToSearch.some((value) => value.includes(search));
+  };
 
   const table = useReactTable({
     data,
@@ -68,6 +97,7 @@ export function EmployeesDataTable({
       columnFilters,
       columnVisibility,
       rowSelection,
+      globalFilter,
       pagination: {
         pageIndex: 0,
         pageSize,
@@ -77,6 +107,11 @@ export function EmployeesDataTable({
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    filterFns: {
+      employeeGlobal: employeeGlobalFilterFn,
+    },
+    globalFilterFn: employeeGlobalFilterFn,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -88,21 +123,20 @@ export function EmployeesDataTable({
     table.setPageSize(pageSize);
   }, [pageSize, table]);
 
-  const showToolbar = showInternalToolbar ?? true;
+    const showToolbar = showInternalToolbar ?? true;
 
   // Columns used for filtering
-  const nameColumn = table.getColumn("name");
   const departmentColumn = table.getColumn("department");
+  const statusColumn = table.getColumn("status");
+  const genderColumn = table.getColumn("gender");
 
-  // Sync external search filter into TanStack column filter
+  // Sync external search into global filter (name, email, phone, etc.)
   React.useEffect(() => {
-    if (!nameColumn) return;
-    const current = (nameColumn.getFilterValue() as string) ?? "";
     const target = externalSearch ?? "";
-    if (current !== target) {
-      nameColumn.setFilterValue(target);
+    if (globalFilter !== target) {
+      setGlobalFilter(target);
     }
-  }, [externalSearch, nameColumn]);
+  }, [externalSearch, globalFilter]);
 
   // Sync external department filter into column filter
   React.useEffect(() => {
@@ -116,6 +150,47 @@ export function EmployeesDataTable({
       departmentColumn.setFilterValue(target);
     }
   }, [externalDepartment, departmentColumn]);
+
+  // Sync external status filter
+  React.useEffect(() => {
+    if (!statusColumn) return;
+    const current = (statusColumn.getFilterValue() as string) ?? "";
+    const target =
+      externalStatus && externalStatus !== "all" ? externalStatus : "";
+    if (current !== target) {
+      statusColumn.setFilterValue(target);
+    }
+  }, [externalStatus, statusColumn]);
+
+  // Sync external gender filter
+  React.useEffect(() => {
+    if (!genderColumn) return;
+    const current = (genderColumn.getFilterValue() as string) ?? "";
+    const target =
+      externalGender && externalGender !== "all" ? externalGender : "";
+    if (current !== target) {
+      genderColumn.setFilterValue(target);
+    }
+  }, [externalGender, genderColumn]);
+
+  // Sync external visible columns into TanStack columnVisibility
+  React.useEffect(() => {
+    if (!visibleColumnIds) return;
+
+    const nextVisibility: VisibilityState = {};
+    table.getAllLeafColumns().forEach((column) => {
+      const id = column.id;
+      if (id === "name") {
+        // Never hide the name+avatar column
+        nextVisibility[id] = true;
+      } else {
+        nextVisibility[id] = visibleColumnIds.includes(id);
+      }
+    });
+
+    table.setColumnVisibility(nextVisibility);
+  }, [visibleColumnIds, table]);
+
 
   // Department options (used by internal toolbar)
   const internalDepartmentOptions = React.useMemo(() => {
@@ -133,12 +208,10 @@ export function EmployeesDataTable({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 items-center gap-2">
             <Input
-              placeholder="Search by name..."
+              placeholder="Search by name, email, phone..."
               className="h-8 w-full max-w-xs"
-              value={(nameColumn?.getFilterValue() as string) ?? ""}
-              onChange={(event) =>
-                nameColumn?.setFilterValue(event.target.value)
-              }
+              value={globalFilter}
+              onChange={(event) => setGlobalFilter(event.target.value)}
             />
             {departmentColumn && internalDepartmentOptions.length > 0 && (
               <Select
@@ -147,7 +220,7 @@ export function EmployeesDataTable({
                 }
                 onValueChange={(value) =>
                   departmentColumn.setFilterValue(
-                    value === "all" ? "" : value
+                    value === "all" ? "" : value,
                   )
                 }
               >

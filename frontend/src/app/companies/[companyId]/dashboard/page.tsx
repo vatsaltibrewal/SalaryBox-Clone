@@ -55,6 +55,8 @@ export default async function CompanyDashboardPage({
       gender: emp.gender,
       status: emp.status,
       createdAt: emp.created_at,
+      avatarUrl: emp.avatar_url,
+      updatedAt: emp.updated_at,
     })) ?? [];
 
   return (

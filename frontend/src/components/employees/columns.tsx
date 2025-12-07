@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpDown } from "lucide-react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import {
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+} from "@/components/ui/avatar";
 
 /**
  * Column definitions for the employees table.
@@ -26,22 +31,46 @@ export const employeeColumns: ColumnDef<EmployeeRow>[] = [
       </Button>
     ),
     cell: ({ row }) => {
-      const { name, jobTitle } = row.original;
+      const { name, jobTitle, avatarUrl, updatedAt } = row.original;
       const params = useParams<{ companyId: string }>();
       const companyId = params.companyId;
       const id = row.original.id;
+
+      const initials =
+        name
+          ?.split(" ")
+          .map((part) => part[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase() ?? "";
+
       return (
         <Link
           href={`/companies/${companyId}/employees/${id}`}
           className="font-medium text-primary hover:underline"
         >
-          <div className="flex flex-col">
-            <span className="font-medium">{name}</span>
-            {jobTitle && (
-              <span className="text-xs text-muted-foreground">
-                {jobTitle}
-              </span>
-            )}
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              {avatarUrl ? (
+                <AvatarImage
+                  src={avatarUrl + `?v=${updatedAt}`}
+                  alt={name || "Employee avatar"}
+                />
+              ) : (
+                <AvatarFallback className="text-xs font-medium">
+                  {initials}
+                </AvatarFallback>
+              )}
+            </Avatar>
+
+            <div className="flex flex-col">
+              <span className="font-medium">{name}</span>
+              {jobTitle && (
+                <span className="text-xs text-muted-foreground">
+                  {jobTitle}
+                </span>
+              )}
+            </div>
           </div>
         </Link>
       );
@@ -152,6 +181,29 @@ export const employeeColumns: ColumnDef<EmployeeRow>[] = [
         >
           {label}
         </span>
+      );
+    },
+  },
+  {
+    accessorKey: "gender",
+    header: () => <span>Gender</span>,
+    cell: ({ getValue }) => {
+      const value = (getValue<string | null>() ?? "").trim();
+      if (!value) {
+        return (
+          <span className="text-xs text-muted-foreground">—</span>
+        );
+      }
+      const lower = value.toLowerCase();
+      const label =
+        lower === "male"
+          ? "Male"
+          : lower === "female"
+          ? "Female"
+          : lower.charAt(0).toUpperCase() + lower.slice(1);
+
+      return (
+        <span className="text-xs text-muted-foreground">{label}</span>
       );
     },
   },

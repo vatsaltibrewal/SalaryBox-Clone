@@ -18,6 +18,14 @@ import { EmployeesDataTable } from "@/components/employees/data-table";
 import { employeeColumns } from "@/components/employees/columns";
 import type { EmployeeRow } from "@/types/employee";
 import { Plus } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
 
 type CompanyDashboardProps = {
   companyId: string;
@@ -35,6 +43,26 @@ export function CompanyDashboard({
   const [search, setSearch] = React.useState("");
   const [branch, setBranch] = React.useState("all");
   const [department, setDepartment] = React.useState("all");
+
+  const [statusFilter, setStatusFilter] = React.useState("all");
+  const [genderFilter, setGenderFilter] = React.useState("all");
+
+  const allToggleableColumns = [
+    { id: "department", label: "Department" },
+    { id: "mobile", label: "Mobile" },
+    { id: "email", label: "Email" },
+    { id: "dateOfJoining", label: "Date of joining" },
+    { id: "status", label: "Status" },
+    { id: "gender", label: "Gender" },
+  ] as const;
+
+  type ToggleableColumnId = (typeof allToggleableColumns)[number]["id"];
+
+  const [visibleColumnIds, setVisibleColumnIds] =
+    React.useState<ToggleableColumnId[]>(
+      allToggleableColumns
+        .map((c) => c.id),
+    );
 
   // Compute department options from employees
   const departmentOptions = React.useMemo(() => {
@@ -149,20 +177,129 @@ export function CompanyDashboard({
               </div>
 
               {/* Placeholder controls */}
-              <Button
-                type="button"
-                variant="outline"
-                className="h-8 px-3 text-xs"
-              >
-                More Filters
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-8 px-3 text-xs"
-              >
-                Show Fields
-              </Button>
+              {/* More Filters – Status + Gender */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 px-3 text-xs"
+                  >
+                    More Filters
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 space-y-3 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    More filters
+                  </p>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">Status</Label>
+                    <Select
+                      value={statusFilter}
+                      onValueChange={setStatusFilter}
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">Gender</Label>
+                    <Select
+                      value={genderFilter}
+                      onValueChange={setGenderFilter}
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="All genders" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All genders</SelectItem>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-1 w-full text-xs"
+                    onClick={() => {
+                      setStatusFilter("all");
+                      setGenderFilter("all");
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                </PopoverContent>
+              </Popover>
+
+              {/* Show Fields – column visibility control */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 px-3 text-xs"
+                  >
+                    Show Fields
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 space-y-2 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Toggle columns
+                  </p>
+                  <div className="space-y-1">
+                    {allToggleableColumns.map((col) => {
+                      const checked = visibleColumnIds.includes(col.id);
+                      return (
+                        <label
+                          key={col.id}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(value) => {
+                              const isChecked = value === true;
+                              setVisibleColumnIds((prev) => {
+                                if (isChecked) {
+                                  if (prev.includes(col.id)) return prev;
+                                  return [...prev, col.id];
+                                }
+                                return prev.filter((id) => id !== col.id);
+                              });
+                            }}
+                          />
+                          <span>{col.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-1 w-full text-xs"
+                    onClick={() =>
+                      setVisibleColumnIds(
+                        allToggleableColumns
+                          .map((c) => c.id),
+                      )
+                    }
+                  >
+                    Reset to default
+                  </Button>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Add Employee CTA */}
@@ -184,8 +321,12 @@ export function CompanyDashboard({
             data={employees}
             externalSearch={search}
             externalDepartment={department}
+            externalStatus={statusFilter}
+            externalGender={genderFilter}
+            visibleColumnIds={visibleColumnIds}
             showInternalToolbar={false}
           />
+
         </TabsContent>
 
         {/* Placeholder content for other tabs */}
