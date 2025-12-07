@@ -526,14 +526,6 @@ export function AddEmployeeWizard({ companyId }: AddEmployeeWizardProps) {
       )}
 
       <div className="flex items-center justify-between pt-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setStep(1)}
-          disabled={submitting}
-        >
-          ← Back
-        </Button>
         <div className="flex gap-2">
           <Button
             type="button"
