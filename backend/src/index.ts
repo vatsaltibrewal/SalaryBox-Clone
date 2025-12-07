@@ -7,7 +7,7 @@ const PORT = Number(process.env.PORT) || 4000;
 
 app.use(
   cors({
-    origin: "*",
+    origin: process.env.CORS_ORIGIN,
   })
 );
 app.use(express.json());
@@ -30,5 +30,5 @@ app.use((_req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`API listening on http://localhost:${PORT}`);
+  console.log(`API listening on PORT ${PORT}`);
 });
